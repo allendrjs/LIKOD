@@ -19,9 +19,31 @@ spring:
       hibernate:
         format_sql: true
 
+  servlet:
+    multipart:
+      # Matches the "Max 10MB per file" the appeal-upload UI advertises.
+      # Spring Boot's own default (1MB) is well under that, so uploads for
+      # any scanned photo bigger than ~1MB would otherwise fail silently.
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 server:
   port: 8080
 
 jwt:
   secret: ${JWT_SECRET:devonlyinsecuresecretchangeme}
   expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+
+ollama:
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:llama3.2}
+  request-timeout-seconds: ${OLLAMA_TIMEOUT_SECONDS:60}
+
+# AI Support Module OCR (Tess4j -> native Tesseract binary, in-process).
+# tessdata-path should point at the "tessdata" folder that ships with your
+# Tesseract install (e.g. C:/Program Files/Tesseract-OCR/tessdata on
+# Windows, or /usr/share/tesseract-ocr/5/tessdata on most Linux installs).
+# Leave blank to fall back to Tess4j's own default lookup.
+tesseract:
+  tessdata-path: ${TESSERACT_DATA_PATH:}
+  language: ${TESSERACT_LANGUAGE:eng}

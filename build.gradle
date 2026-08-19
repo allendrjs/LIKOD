@@ -24,6 +24,16 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'com.auth0:java-jwt:4.4.0'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
+    // AI Support Module -- all in-process Java, no external sidecar.
+    // Apache Tika: PDF/DOCX text extraction from uploaded appeal letters.
+    implementation 'org.apache.tika:tika-core:2.9.2'
+    implementation 'org.apache.tika:tika-parsers-standard-package:2.9.2'
+    // Tess4j: JNA wrapper around the native Tesseract OCR engine, used for
+    // scanned/handwritten letter images (jpg/png/etc). Still requires the
+    // Tesseract binary + tessdata installed on the machine running the
+    // backend (see application.yaml's tesseract.tessdata-path), same as
+    // before -- only the calling side moved from Python into this JVM.
+    implementation 'net.sourceforge.tess4j:tess4j:5.11.0'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'

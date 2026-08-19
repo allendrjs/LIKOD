@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.rocs.osdrmsa.domain.appeal.Appeal;
 import org.rocs.osdrmsa.dto.request.AppealFileRequest;
 import org.rocs.osdrmsa.dto.request.AppealRequest;
+import org.rocs.osdrmsa.dto.summary.AiSuggestionSummary;
 import org.rocs.osdrmsa.service.appeal.AppealService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,8 +35,16 @@ public class AppealController {
     @PostMapping
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<Appeal> submitAppeal(@RequestBody AppealFileRequest request) {
-        Appeal appeal = appealService.submitAppeal(request.recordId(), request.enrollmentId(), request.message());
+        Appeal appeal = appealService.submitAppeal(
+                request.recordId(), request.enrollmentId(), request.message(), request.documentId());
         return ResponseEntity.ok(appeal);
+    }
+
+    @GetMapping("/{id}/suggestions")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_PREFECT')")
+    public ResponseEntity<AiSuggestionSummary> getSuggestions(@PathVariable Long id) {
+        AiSuggestionSummary suggestion = appealService.getSuggestionsForAppeal(id);
+        return suggestion != null ? ResponseEntity.ok(suggestion) : ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/approve")
