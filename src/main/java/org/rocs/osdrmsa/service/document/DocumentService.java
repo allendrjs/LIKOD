@@ -6,11 +6,13 @@ public interface DocumentService {
 
     /**
      * Processes an appeal-letter upload on behalf of the currently
-     * authenticated student: extracts its text (Tesseract OCR for images via
-     * the AI sidecar, Apache Tika in-process for PDF/DOCX), saves it as a
-     * Document, runs spaCy/BM25 keyword-and-policy matching against the
-     * existing Suggestion templates, and persists any matches as
-     * GeneratedSuggestion rows.
+     * authenticated student: extracts its text (Tess4j/Tesseract OCR for
+     * images, Apache Tika for PDF/DOCX -- both in-process, no external
+     * service), saves it as a Document, runs an in-process BM25 retrieval
+     * step against the existing Suggestion templates to gather policy hints,
+     * then sends those hints plus the student's case history to Ollama to
+     * generate a case-specific suggestion, persisted as a GeneratedSuggestion
+     * row.
      *
      * @param username the authenticated principal's login username (not the
      *                 studentId) -- resolved server-side, same as the chat

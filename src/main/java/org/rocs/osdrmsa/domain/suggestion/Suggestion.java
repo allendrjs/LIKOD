@@ -5,10 +5,11 @@ import lombok.Data;
 
 /**
  * A predefined suggestion template (Table 15, Suggestion Table in the thesis
- * paper). These are seeded ahead of time -- the AI Support Module does not
- * generate new suggestion text on the fly, it only decides which existing
- * templates are relevant to a given uploaded document via keyword/policy
- * matching (spaCy + BM25).
+ * paper). These are seeded ahead of time and used as retrieval hints: an
+ * in-process BM25 keyword matcher picks the most relevant templates for a
+ * given uploaded document, and those hints (plus the letter text and the
+ * student's case history) are passed to Ollama, which generates the actual
+ * case-specific suggestion text (see GeneratedSuggestion).
  */
 @Entity
 @Data
