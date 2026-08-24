@@ -13,7 +13,11 @@ public class Student {
     @Column(name = "studentID", nullable = false, updatable = false)
     private String studentId;
 
-    @OneToOne
+    // PERSIST+MERGE (not ALL/REMOVE) so creating/updating a Student also
+    // creates/updates its nested Person, but deleting a Student never
+    // cascades into deleting the Person row -- a Person can still be
+    // referenced elsewhere (e.g. a Login) after the Student is gone.
+    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinColumn(name = "personID")
     private Person person;
 

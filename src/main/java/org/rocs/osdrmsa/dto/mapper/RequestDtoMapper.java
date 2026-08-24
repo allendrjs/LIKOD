@@ -10,9 +10,9 @@ public final class RequestDtoMapper {
     private RequestDtoMapper() {
     }
 
-    public static Request toEntity(RequestSubmitRequest request) {
+    public static Request toEntity(RequestSubmitRequest request, String employeeId) {
         Request entity = new Request();
-        entity.setEmployeeID(request.employeeId());
+        entity.setEmployeeID(employeeId);
         entity.setDetails(request.details());
         entity.setMessage(request.message());
         entity.setType(request.type());
@@ -30,6 +30,7 @@ public final class RequestDtoMapper {
                 request.getMessage(),
                 request.getType(),
                 request.getStatus(),
+                DateConversion.toLocalDate(request.getDateFiled()),
                 DateConversion.toLocalDate(request.getDateProcessed()),
                 request.getRemarks());
     }

@@ -7,9 +7,11 @@ import org.rocs.osdrmsa.dto.request.RequestSubmitRequest;
 import org.rocs.osdrmsa.dto.mapper.RequestDtoMapper;
 import org.rocs.osdrmsa.domain.request.Request;
 import org.rocs.osdrmsa.domain.request.RequestStatus;
+import org.rocs.osdrmsa.service.employee.EmployeeService;
 import org.rocs.osdrmsa.service.request.RequestService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,11 +22,18 @@ import java.util.List;
 public class RequestController {
 
     private final RequestService requestService;
+    private final EmployeeService employeeService;
 
+    /**
+     * Submitter is resolved from the JWT (never from the request body) --
+     * same convention as every other self-scoped endpoint in this app.
+     */
     @PostMapping
     @PreAuthorize("hasRole('STAFF')")
-    public ResponseEntity<RequestResponse> submit(@RequestBody RequestSubmitRequest request) {
-        Request submitted = requestService.submitRequest(RequestDtoMapper.toEntity(request));
+    public ResponseEntity<RequestResponse> submit(
+            @RequestBody RequestSubmitRequest request, Authentication authentication) {
+        String employeeId = employeeService.getBySelf(authentication.getName()).getEmployeeId();
+        Request submitted = requestService.submitRequest(RequestDtoMapper.toEntity(request, employeeId));
         return ResponseEntity.ok(RequestDtoMapper.toResponse(submitted));
     }
 
@@ -41,6 +50,21 @@ public class RequestController {
     public ResponseEntity<List<RequestResponse>> getByEmployee(@PathVariable String employeeId) {
         return ResponseEntity.ok(
                 requestService.getByEmployeeId(employeeId).stream()
+                        .map(RequestDtoMapper::toResponse)
+                        .toList());
+    }
+
+    /**
+     * Self-scoped version of the employee endpoint above -- for a
+     * Department Head's own dashboard, resolved from the JWT rather than a
+     * client-supplied employeeId, so a STAFF user can never pass someone
+     * else's ID and see their requests.
+     */
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<List<RequestResponse>> getMine(Authentication authentication) {
+        return ResponseEntity.ok(
+                requestService.getMyRequests(authentication.getName()).stream()
                         .map(RequestDtoMapper::toResponse)
                         .toList());
     }

@@ -30,6 +30,9 @@ public class Request {
     @Column(name = "status", nullable = false)
     private RequestStatus status;
 
+    @Column(name = "dateFiled")
+    private Date dateFiled;
+
     @Column(name = "dateProcessed")
     private Date dateProcessed;
 

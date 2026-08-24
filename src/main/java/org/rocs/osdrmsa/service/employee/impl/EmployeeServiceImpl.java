@@ -2,8 +2,10 @@ package org.rocs.osdrmsa.service.employee.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.rocs.osdrmsa.domain.department.Department;
+import org.rocs.osdrmsa.domain.login.Login;
 import org.rocs.osdrmsa.domain.person.employee.Employee;
 import org.rocs.osdrmsa.repository.employee.EmployeeRepository;
+import org.rocs.osdrmsa.repository.login.LoginRepository;
 import org.rocs.osdrmsa.service.employee.EmployeeService;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,7 @@ import java.util.Optional;
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final LoginRepository loginRepository;
 
     @Override
     public List<Employee> getAll() {
@@ -59,5 +62,18 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public void delete(String employeeId) {
         employeeRepository.deleteById(employeeId);
+    }
+
+    @Override
+    public Employee getBySelf(String username) {
+        Login login = loginRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalStateException("No account found for the current session."));
+
+        if (login.getPerson() == null) {
+            throw new IllegalStateException("This account isn't linked to a person record.");
+        }
+
+        return employeeRepository.findByPerson_PersonId(login.getPerson().getPersonId())
+                .orElseThrow(() -> new IllegalStateException("No employee profile found for the current session."));
     }
 }

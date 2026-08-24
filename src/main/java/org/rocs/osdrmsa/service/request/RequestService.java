@@ -16,4 +16,12 @@ public interface RequestService {
     List<Request> getByStatus(RequestStatus status);
 
     List<Request> getAll();
+
+    /**
+     * The requests filed by the currently authenticated STAFF user (e.g. a
+     * Department Head viewing their own submitted requests) -- resolved
+     * server-side from the JWT via Employee, never a client-supplied
+     * employeeId.
+     */
+    List<Request> getMyRequests(String username);
 }

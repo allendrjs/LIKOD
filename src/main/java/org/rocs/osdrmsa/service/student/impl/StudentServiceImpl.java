@@ -57,6 +57,7 @@ public class StudentServiceImpl implements StudentService {
         existing.setPerson(student.getPerson());
         existing.setAddress(student.getAddress());
         existing.setStudentType(student.getStudentType());
+        existing.setContactNumber(student.getContactNumber());
         existing.setDepartment(student.getDepartment());
 
         return studentRepository.save(existing);
