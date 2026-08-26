@@ -4,6 +4,7 @@ import org.rocs.osdrmsa.domain.appeal.Appeal;
 import org.rocs.osdrmsa.domain.document.Document;
 import org.rocs.osdrmsa.domain.enrollment.Enrollment;
 import org.rocs.osdrmsa.domain.record.Record;
+import org.rocs.osdrmsa.domain.record.RecordStatus;
 import org.rocs.osdrmsa.domain.suggestion.GeneratedSuggestion;
 import org.rocs.osdrmsa.dto.summary.AiSuggestionSummary;
 import org.rocs.osdrmsa.repository.appeal.AppealRepository;
@@ -59,6 +60,14 @@ public class AppealServiceImpl implements AppealService {
             throw new IllegalArgumentException("Appeal message is required.");
         }
 
+        if (record.getStatus() != RecordStatus.PENDING) {
+            throw new IllegalStateException("This offense has already been appealed and cannot be appealed again.");
+        }
+
+        if (appealRepository.existsByRecord_RecordId(recordId)) {
+            throw new IllegalStateException("This offense has already been appealed and cannot be appealed again.");
+        }
+
         Appeal appeal = new Appeal();
         appeal.setRecord(record);
         appeal.setEnrollment(enrollment);
@@ -72,7 +81,12 @@ public class AppealServiceImpl implements AppealService {
             appeal.setDocument(document);
         }
 
-        return appealRepository.save(appeal);
+        Appeal savedAppeal = appealRepository.save(appeal);
+
+        record.setStatus(RecordStatus.APPEALED);
+        recordRepository.save(record);
+
+        return savedAppeal;
     }
 
     @Override

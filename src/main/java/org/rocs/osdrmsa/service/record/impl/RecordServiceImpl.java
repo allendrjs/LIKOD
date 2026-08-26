@@ -65,11 +65,25 @@ public class RecordServiceImpl implements RecordService {
             );
         }
 
-        if (!recordRepository.existsById(record.getRecordId())) {
-            throw new NoSuchElementException("Record not found: " + record.getRecordId());
-        }
+        // RecordUpdateRequest only carries the editable detail fields (enrollment,
+        // employee, offense, date of violation, action, remarks) -- it has no
+        // status or dateOfResolution. Building a fresh Record from that DTO and
+        // saving it directly would blank out whichever status/resolution date the
+        // record already had (e.g. wiping APPEALED back to null). Load the
+        // existing row instead and only overwrite the fields this endpoint is
+        // actually meant to edit, so status transitions set elsewhere
+        // (create/resolve/appeal) survive an unrelated detail edit.
+        Record existing = recordRepository.findById(record.getRecordId())
+                .orElseThrow(() -> new NoSuchElementException("Record not found: " + record.getRecordId()));
 
-        return recordRepository.save(record);
+        existing.setEnrollment(record.getEnrollment());
+        existing.setEmployee(record.getEmployee());
+        existing.setOffense(record.getOffense());
+        existing.setDateOfViolation(record.getDateOfViolation());
+        existing.setAction(record.getAction());
+        existing.setRemarks(record.getRemarks());
+
+        return recordRepository.save(existing);
     }
 
     @Override
