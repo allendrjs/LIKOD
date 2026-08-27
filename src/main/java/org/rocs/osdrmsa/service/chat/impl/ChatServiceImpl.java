@@ -24,10 +24,13 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,7 +38,27 @@ import java.util.stream.Collectors;
 public class ChatServiceImpl implements ChatService {
 
     private static final int MAX_RECENT_ITEMS = 10;
-    private static final int MAX_HANDBOOK_HINTS = 4;
+    private static final int MAX_HANDBOOK_HINTS = 5;
+
+    /**
+     * Words that are near-universal across every section of a given
+     * department's handbook (it's literally titled "[Department] Student
+     * Handbook", every page mentions the school by name, etc.) or that add
+     * no topical signal, but aren't in AiAnalysisClient's general English
+     * stopword list because they're meaningful words in other contexts.
+     * Left in the query, they dilute BM25 ranking toward whichever section
+     * happens to repeat them most rather than the section that actually
+     * answers the question -- confirmed empirically: "list" alone was
+     * enough to rank "Graduation Honors" (full of "Dean's List" mentions)
+     * above the actual disciplinary-action matrix for a query about major
+     * offenses. Kept local to handbook retrieval rather than added to
+     * AiAnalysisClient's shared stopword set, since that set is also used
+     * for unrelated Suggestion-template matching where these words aren't
+     * noise.
+     */
+    private static final Set<String> HANDBOOK_QUERY_NOISE_WORDS = Set.of(
+            "student", "students", "handbook", "list", "rogationist", "college", "school", "department"
+    );
 
     private static final String SYSTEM_PROMPT = """
             You are the RC-OSD Assistant, a support chatbot inside the Rogationist College Office for \
@@ -47,10 +70,13 @@ public class ChatServiceImpl implements ChatService {
             1. Only use the student information given to you in the CONTEXT block below. Never invent \
             offenses, dates, statuses, or details that are not explicitly present in CONTEXT.
             2. For questions about school rules or policy, only use the HANDBOOK CONTEXT block below. Never \
-            invent a rule, fee, or procedure that isn't in it. When you use a HANDBOOK CONTEXT excerpt, name \
-            the section it came from (e.g. "Under 'Dress Code and Grooming'..."). If HANDBOOK CONTEXT says \
-            nothing matched the question, say plainly that it isn't covered in the handbook and suggest the \
-            student contact the Office for Student Discipline -- do not guess.
+            invent a rule, fee, procedure, or section/category name that isn't printed verbatim in it, and \
+            never invent a section number -- only cite one if that exact number appears in HANDBOOK CONTEXT. \
+            When you use a HANDBOOK CONTEXT excerpt, name the section it came from using its exact heading \
+            (e.g. "Under 'Dress Code and Grooming'..."). If none of the HANDBOOK CONTEXT excerpts actually \
+            answer the question, say plainly that it isn't covered in the handbook and suggest the student \
+            contact the Office for Student Discipline -- do not paraphrase unrelated excerpts into an answer \
+            that sounds plausible but isn't actually written there.
             3. Do not give legal advice, and do not judge whether the student is guilty or innocent of an offense.
             4. A student can file an appeal on a PENDING offense from that offense's detail screen in the app.
             5. If asked about other students, or about a disciplinary decision that hasn't been made yet, say \
@@ -136,7 +162,8 @@ public class ChatServiceImpl implements ChatService {
                 .map(s -> new AiAnalysisClient.Candidate(s.getHandbookSectionId(), s.getTitle() + "\n" + s.getBody()))
                 .toList();
 
-        AiAnalysisClient.AnalyzeResult result = aiAnalysisClient.analyze(query, candidates);
+        String cleanedQuery = cleanHandbookQuery(query);
+        AiAnalysisClient.AnalyzeResult result = aiAnalysisClient.analyze(cleanedQuery, candidates);
 
         Map<Long, HandbookSection> byId = sections.stream()
                 .collect(Collectors.toMap(HandbookSection::getHandbookSectionId, s -> s, (a, b) -> a, HashMap::new));
@@ -158,6 +185,25 @@ public class ChatServiceImpl implements ChatService {
 
         return "HANDBOOK CONTEXT (excerpts from the " + department.getDisplayName()
                 + " Student Handbook -- cite the section name when you use one):\n\n" + String.join("\n\n", hints);
+    }
+
+    /**
+     * Strips HANDBOOK_QUERY_NOISE_WORDS out of the student's raw message
+     * before it's used as the BM25 query. Confirmed empirically against the
+     * actual College handbook: leaving "list" in a "list the major offenses"
+     * query was enough on its own to rank the Graduation Honors section
+     * (full of "Dean's List" mentions) above the real disciplinary-action
+     * matrix, which then starved the LLM of the right context and led it to
+     * fabricate an answer instead. Falls back to the original query if
+     * stripping would leave nothing to search on.
+     */
+    private String cleanHandbookQuery(String query) {
+        String cleaned = Arrays.stream(query.split("\\s+"))
+                .filter(word -> !HANDBOOK_QUERY_NOISE_WORDS.contains(
+                        word.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "")))
+                .collect(Collectors.joining(" "))
+                .trim();
+        return cleaned.isBlank() ? query : cleaned;
     }
 
     private String buildContext(Student student) {
