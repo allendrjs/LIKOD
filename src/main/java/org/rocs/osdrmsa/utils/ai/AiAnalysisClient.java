@@ -82,8 +82,8 @@ public class AiAnalysisClient {
         }
     }
 
-    public AnalyzeResult analyze(String text, List<SuggestionCandidate> suggestions) {
-        if (text == null || text.isBlank() || suggestions == null || suggestions.isEmpty()) {
+    public AnalyzeResult analyze(String text, List<Candidate> candidates) {
+        if (text == null || text.isBlank() || candidates == null || candidates.isEmpty()) {
             return new AnalyzeResult(List.of(), List.of());
         }
 
@@ -93,8 +93,8 @@ public class AiAnalysisClient {
         }
 
         Map<Long, List<String>> docTokensById = new LinkedHashMap<>();
-        for (SuggestionCandidate candidate : suggestions) {
-            docTokensById.put(candidate.suggestionId(), tokenize(candidate.text()));
+        for (Candidate candidate : candidates) {
+            docTokensById.put(candidate.id(), tokenize(candidate.text()));
         }
 
         double avgDocLen = docTokensById.values().stream()
@@ -112,17 +112,17 @@ public class AiAnalysisClient {
 
         int corpusSize = docTokensById.size();
 
-        List<SuggestionMatch> matches = new ArrayList<>();
-        for (SuggestionCandidate candidate : suggestions) {
-            List<String> docTokens = docTokensById.get(candidate.suggestionId());
+        List<Match> matches = new ArrayList<>();
+        for (Candidate candidate : candidates) {
+            List<String> docTokens = docTokensById.get(candidate.id());
             double score = bm25Score(uniqueQueryTerms, docTokens, docFrequency, corpusSize, avgDocLen);
             if (score > 0) {
-                matches.add(new SuggestionMatch(candidate.suggestionId(), score));
+                matches.add(new Match(candidate.id(), score));
             }
         }
 
         matches.sort((a, b) -> Double.compare(b.score(), a.score()));
-        List<SuggestionMatch> topMatches = matches.stream().limit(MAX_MATCHES).toList();
+        List<Match> topMatches = matches.stream().limit(MAX_MATCHES).toList();
 
         List<String> keywords = queryTokens.stream()
                 .distinct()
@@ -174,12 +174,18 @@ public class AiAnalysisClient {
         return tokens;
     }
 
-    public record SuggestionCandidate(Long suggestionId, String text) {
+    /**
+     * A generic retrieval candidate -- used for Suggestion templates in the
+     * AI Support Module and for Student Handbook sections in the chatbot.
+     * Anything with an id and a body of text to match against can go through
+     * the same BM25 ranking below.
+     */
+    public record Candidate(Long id, String text) {
     }
 
-    public record SuggestionMatch(Long suggestionId, double score) {
+    public record Match(Long id, double score) {
     }
 
-    public record AnalyzeResult(List<String> keywords, List<SuggestionMatch> matches) {
+    public record AnalyzeResult(List<String> keywords, List<Match> matches) {
     }
 }

@@ -192,8 +192,8 @@ public class DocumentServiceImpl implements DocumentService {
             return "POLICY HINTS: none available.";
         }
 
-        List<AiAnalysisClient.SuggestionCandidate> candidates = allSuggestions.stream()
-                .map(s -> new AiAnalysisClient.SuggestionCandidate(s.getSuggestionId(), s.getSuggestionText()))
+        List<AiAnalysisClient.Candidate> candidates = allSuggestions.stream()
+                .map(s -> new AiAnalysisClient.Candidate(s.getSuggestionId(), s.getSuggestionText()))
                 .toList();
 
         AiAnalysisClient.AnalyzeResult result = aiAnalysisClient.analyze(extractedText, candidates);
@@ -205,7 +205,7 @@ public class DocumentServiceImpl implements DocumentService {
         result.matches().stream()
                 .limit(MAX_RETRIEVED_HINTS)
                 .forEach(match -> {
-                    Suggestion suggestion = byId.get(match.suggestionId());
+                    Suggestion suggestion = byId.get(match.id());
                     if (suggestion != null) {
                         hints.add("- " + suggestion.getSuggestionText());
                     }

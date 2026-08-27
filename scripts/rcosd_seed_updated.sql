@@ -18,6 +18,7 @@ DROP TABLE request CASCADE CONSTRAINTS;
 DROP TABLE guardian CASCADE CONSTRAINTS;
 DROP TABLE studentGuardian CASCADE CONSTRAINTS;
 DROP TABLE AUDIT_LOG CASCADE CONSTRAINTS;
+DROP TABLE handbookSection CASCADE CONSTRAINTS;
 -- PERSON ENTITY
 CREATE TABLE person (
    personID number(20,0) generated as identity
@@ -175,6 +176,19 @@ CREATE TABLE generatedSuggestion (
    generatedAt TIMESTAMP,
    primary key (generatedSuggestionID)
 );
+-- HANDBOOK SECTION ENTITY (handbook-grounded chatbot retrieval -- see
+-- HandbookSection.java / HandbookSeeder.java). Not seeded here: the app
+-- populates this table itself on first boot from src/main/resources/
+-- handbook/*.md, so no INSERT statements are needed for it below.
+CREATE TABLE handbookSection (
+   handbookSectionID number(20,0) generated as identity
+       constraint HANDBOOKSECTION_NOT_NULL not null,
+   department VARCHAR2(20) NOT NULL,
+   title VARCHAR2(500),
+   body CLOB,
+   orderIndex NUMBER,
+   primary key (handbookSectionID)
+);
 -- CONSTRAINTS
 ALTER TABLE login ADD CONSTRAINT FK_LOGIN_PERSON FOREIGN KEY (personID) REFERENCES person(personID);
 ALTER TABLE employee ADD CONSTRAINT FK_EMPLOYEE_PERSON FOREIGN KEY (personID) REFERENCES person(personID);
@@ -199,6 +213,7 @@ ALTER TABLE record ADD CONSTRAINT CHK_RECORD_STATUS CHECK (status IN ('PENDING',
 ALTER TABLE employee ADD CONSTRAINT CHK_EMPLOYEE_DEPT CHECK (department IN ('JHS', 'SHS', 'COLLEGE'));
 ALTER TABLE student ADD CONSTRAINT CHK_STUDENT_DEPT CHECK (department IN ('JHS', 'SHS', 'COLLEGE'));
 ALTER TABLE enrollment ADD CONSTRAINT CHK_ENROLL_DEPT CHECK (department IN ('JHS', 'SHS', 'COLLEGE'));
+ALTER TABLE handbookSection ADD CONSTRAINT CHK_HANDBOOK_DEPT CHECK (department IN ('JHS', 'SHS', 'COLLEGE'));
 ALTER TABLE guardian ADD CONSTRAINT CHK_GUARDIAN_RELATIONSHIP CHECK (relationship IN ('FATHER', 'MOTHER', 'GUARDIAN'));
 -- AUDIT_LOG ENTITY (added for BE-44 audit logging; not part of the
 -- original DDL script, since it was built before the schema-alignment
